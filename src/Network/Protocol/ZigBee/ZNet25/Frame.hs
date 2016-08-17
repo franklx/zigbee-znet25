@@ -50,6 +50,8 @@ module Network.Protocol.ZigBee.ZNet25.Frame (
   , TransmitOptions
   , TransmitRetryCount
   , XBeeSensorMask
+
+  , getNodeIdentificationIndicator
 ) where
 
 import Control.Applicative
