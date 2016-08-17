@@ -13,7 +13,7 @@ module Network.Protocol.ZigBee.ZNet25.Frame (
     Frame(..)
 
   -- * AT-style command names
-  , CommandName
+  , CommandName(..)
   , commandName
   , unCommandName
 
