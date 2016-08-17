@@ -52,6 +52,7 @@ module Network.Protocol.ZigBee.ZNet25.Frame (
   , XBeeSensorMask
 
   , getNodeIdentificationIndicator
+  , showHexString
 ) where
 
 import Control.Applicative
