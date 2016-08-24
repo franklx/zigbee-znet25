@@ -1,11 +1,11 @@
 name:               zigbee-znet25
-version:            0.1.1.0
+version:            0.2.0.0
 license:            BSD3
 license-file:       LICENSE
 category:           Network
 copyright:          Copyright (c) 2012 David Joyner
 author:             David Joyner <david@joynerhome.net>
-maintainer:         David Joyner <david@joynerhome.net>
+maintainer:         Franco Lucchini <flucchini@gmail.com>
 stability:          experimental
 tested-with:        GHC == 7.0.4
 synopsis:           XBee ZNet 2.5 (ZigBee) wireless modem communications
