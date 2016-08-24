@@ -22,7 +22,6 @@ module Network.Protocol.ZigBee.ZNet25.Encoder (
 
 import Network.Protocol.ZigBee.ZNet25.Constants
 import Network.Protocol.ZigBee.ZNet25.Frame
-import Control.Monad
 import qualified Control.Monad.State as S
 import qualified Data.ByteString as B
 import Data.Either.Utils (forceEither)
@@ -62,7 +61,7 @@ encode f = [ B.singleton ctrlFrameDelim, len, f_enc, cksum ]
     f_enc = DS.encode f
     len   = (DS.runPut . DS.putWord16be .
              fromIntegral . B.length) f_enc
-    cksum = B.singleton $ 0xff - (B.foldl (+) 0 f_enc)
+    cksum = B.singleton $ 0xff - B.foldl (+) 0 f_enc
 
 data FrameState = Hunting
                 | GetLength
@@ -147,7 +146,7 @@ decode bs0 = do
     -- Once we've accumulated the whole frame (including the checksum byte)
     -- then we can decode and output the result
     go ds@(DS GetData len buf) bs
-      | B.length buf' >= len = liftM (result:) $ go ds_h $ B.drop len buf'
+      | B.length buf' >= len = fmap (result:) $ go ds_h $ B.drop len buf'
       | otherwise            = S.put ds_gd >> return []
       where
         result

@@ -55,7 +55,6 @@ module Network.Protocol.ZigBee.ZNet25.Frame (
   , showHexString
 ) where
 
-import Control.Monad (liftM)
 import qualified Data.ByteString as B
 import Data.Char (chr, ord)
 import Data.List (intercalate)
@@ -403,7 +402,7 @@ unCommandName :: CommandName -> String
 unCommandName (CommandName s) = s
 
 instance Serialize CommandName where
-  put (CommandName s) = put (s !! 0) >> put (s !! 1)
+  put (CommandName s) = put (head s) >> put (s !! 1)
   get = do
     c1 <- get
     c2 <- get
@@ -492,12 +491,12 @@ getRemainingByteString = do
   getByteString $ fromIntegral len
 
 putNullTerminatedString :: String -> PutM ()
-putNullTerminatedString s = mapM_ put s >> (put $ chr 0)
+putNullTerminatedString s = mapM_ put s >> put (chr 0)
 
 getNullTerminatedString :: Get String
 getNullTerminatedString = get >>= go
   where
-    go c | ord c /= 0 = liftM (c:) getNullTerminatedString
+    go c | ord c /= 0 = fmap (c:) getNullTerminatedString
          | otherwise  = return []
 
 showHexString :: String -> B.ByteString -> String
