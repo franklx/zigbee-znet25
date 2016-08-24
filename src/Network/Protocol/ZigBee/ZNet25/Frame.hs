@@ -55,7 +55,6 @@ module Network.Protocol.ZigBee.ZNet25.Frame (
   , showHexString
 ) where
 
-import Control.Applicative
 import Control.Monad (liftM)
 import qualified Data.ByteString as B
 import Data.Char (chr, ord)

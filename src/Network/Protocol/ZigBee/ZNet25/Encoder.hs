@@ -24,11 +24,9 @@ import Network.Protocol.ZigBee.ZNet25.Constants
 import Network.Protocol.ZigBee.ZNet25.Frame
 import Control.Monad
 import qualified Control.Monad.State as S
-import Data.Bits (xor)
 import qualified Data.ByteString as B
 import Data.Either.Utils (forceEither)
 import qualified Data.Serialize as DS
-import Data.Word
 
 -- | Serialize a 'Frame', escape control characters, and wrap the result with
 -- framing bytes.  Return an array of 'B.ByteString' suitable for transmission
@@ -59,13 +57,12 @@ import Data.Word
 -- frame length (4 bytes in this case), that many bytes of data (the
 -- serialized 'ATCommand' frame), and the final checksum byte.
 encode :: Frame -> [B.ByteString]
-encode f = [ B.singleton ctrlFrameDelim, len, f_esc, cksum ]
+encode f = [ B.singleton ctrlFrameDelim, len, f_enc, cksum ]
   where
     f_enc = DS.encode f
-    f_esc = escapeBuffer f_enc
-    len   = (escapeBuffer . DS.runPut . DS.putWord16be .
+    len   = (DS.runPut . DS.putWord16be .
              fromIntegral . B.length) f_enc
-    cksum = escapeBuffer $ B.singleton $ 0xff - (B.foldl (+) 0 f_enc)
+    cksum = B.singleton $ 0xff - (B.foldl (+) 0 f_enc)
 
 data FrameState = Hunting
                 | GetLength
@@ -77,16 +74,15 @@ data FrameState = Hunting
 data DecoderState = DS
   { dsFrameState :: FrameState
   , dsFrameLength :: Int
-  , dsEscapedChar :: Bool
   , dsBuffer :: B.ByteString } deriving Show
 
 -- | Initial state needed to run 'decode' in the 'S.State' monad.
 initDecode :: DecoderState
-initDecode = DS Hunting 0 False B.empty
+initDecode = DS Hunting 0 B.empty
 
 -- | Decode a 'B.ByteString' in the 'S.State' monad, reversing the 'encode'
--- process.  Once a frame delimiter byte is found, the inner frame payload is
--- unescaped, the checksum is verified, and finally a 'Frame' is deserialized.
+-- process.  Once a frame delimiter byte is found,  the checksum is verified,
+-- and finally a 'Frame' is deserialized.
 --
 -- Note that this function may produce zero or more errors or 'Frame's depending
 -- on the 'DecoderState' and input byte string.  Errors will be reported for
@@ -124,21 +120,20 @@ initDecode = DS Hunting 0 False B.empty
 decode :: S.MonadState DecoderState m => B.ByteString -> m [Either String Frame]
 decode bs0 = do
     ds <- S.get
-    let t = S.runState (unescapeBuffer bs0) $ dsEscapedChar ds
-    go ds { dsEscapedChar = snd t } $ fst t
+    go ds bs0
 
   where
     -- Drop bytes until a frame delimiter is found
-    go ds@(DS Hunting _ _ _) bs
+    go ds@(DS Hunting _ _) bs
       | B.null bs                   = S.put ds >> return []
       | B.head bs == ctrlFrameDelim = go ds_gl $ B.tail bs
       | otherwise                   = go ds $ B.tail bs
       where
         ds_gl = ds { dsFrameState = GetLength, dsBuffer = B.empty }
 
-    -- Once we have at least two bytes of unescaped data,
+    -- Once we have at least two bytes of data,
     -- deserialize the length (add one byte for trailing checksum)
-    go ds@(DS GetLength _ _ buf) bs
+    go ds@(DS GetLength _ buf) bs
       | B.length buf' >= 2 = go ds_gd $ B.drop 2 buf'
       | otherwise          = S.put ds_gl >> return []
       where
@@ -151,7 +146,7 @@ decode bs0 = do
 
     -- Once we've accumulated the whole frame (including the checksum byte)
     -- then we can decode and output the result
-    go ds@(DS GetData len _ buf) bs
+    go ds@(DS GetData len buf) bs
       | B.length buf' >= len = liftM (result:) $ go ds_h $ B.drop len buf'
       | otherwise            = S.put ds_gd >> return []
       where
@@ -164,31 +159,3 @@ decode bs0 = do
         cksum_ok      = B.foldl (+) 0 (B.take len buf') == 0xff
         ds_h          = initDecode
         ds_gd         = ds { dsBuffer = buf' }
-
-escapeBuffer :: B.ByteString -> B.ByteString
-escapeBuffer = B.concat . fmap B.pack . map escapeChar . B.unpack
-
-unescapeBuffer :: S.MonadState Bool m => B.ByteString -> m B.ByteString
-unescapeBuffer = liftM (B.pack . concat) . mapM unescapeChar . B.unpack
-
-escapeChar :: Word8 -> [Word8]
-escapeChar c
-  | isControlChar c = [ctrlEscape, c `xor` 0x20]
-  | otherwise       = [c]
-
-unescapeChar :: S.MonadState Bool m => Word8 -> m [Word8]
-unescapeChar c = S.get >>= unescape
-  where
-    unescape True       = S.put False >> return [c `xor` 0x20]
-    unescape False
-      | c == ctrlEscape = S.put True >> return []
-      | otherwise       = return [c]
-
-isControlChar :: Word8 -> Bool
-isControlChar c
-  | c == ctrlFrameDelim = True
-  | c == ctrlEscape     = True
-  | c == ctrlXon        = True
-  | c == ctrlXoff       = True
-  | otherwise           = False
-

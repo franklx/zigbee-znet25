@@ -55,8 +55,7 @@ library
     bytestring,
     cereal,
     MissingH,
-    mtl,
-    transformers
+    mtl
 
   hs-source-dirs:   src
 
