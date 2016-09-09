@@ -1,6 +1,5 @@
 {-# OPTIONS -fno-warn-orphans -fno-warn-unused-binds #-}
 
-import Control.Applicative
 import Control.Monad.State
 import qualified Data.ByteString as B
 import Data.Bits (xor)
@@ -18,19 +17,19 @@ prop_DecodeRandomFrameWithoutException bs =
   seq (evalState (decode $ B.cons 0x7e bs) initDecode) True
 
 prop_EncoderDecoderIdentity f =
-    check $ evalState (liftM concat $ mapM decode $ encode f) initDecode
+    check $ evalState (fmap concat $ mapM decode $ encode f) initDecode
   where
-    check ((Right f0):[]) = f == f0
-    check _               = False
+    check [Right f0] = f == f0
+    check _          = False
 
 prop_DecoderDetectsChecksumErrors f =
     seq (check $ evalState (decode f_enc) initDecode, f_munged) True
   where
-    check ((Left err):[]) = err == "Checksum error"
-    check _               = False
-    f_enc                 = B.concat $ encode f
-    f_munged              = B.snoc (B.take (B.length f_enc - 1) f_enc) $
-                            B.last f_enc `xor` 0x55
+    check [Left err] = err == "Checksum error"
+    check _          = False
+    f_enc            = B.concat $ encode f
+    f_munged         = B.snoc (B.take (B.length f_enc - 1) f_enc) $
+                       B.last f_enc `xor` 0x55
 
 -- QuickCheck test runner
 test :: Testable a => a -> IO Bool
@@ -38,13 +37,13 @@ test t =
   do
     r <- quickCheckResult t
     return $ case r of
-      Success _ _ _ -> True
-      _             -> False
+        Success{} -> True
+        _         -> False
 
 main :: IO ()
 main =
   do
-    success <- liftM and $ mapM (\(s, a) -> printf "%-50s: " s >> a) tests
+    success <- and <$> mapM (\ (s, a) -> printf "%-50s: " s >> a) tests
     if success then exitSuccess else exitFailure
   where tests =
           [
@@ -99,10 +98,10 @@ instance Arbitrary CommandName where
     return $ commandName [c1,c2]
 
 instance Arbitrary Address where
-  arbitrary = address <$> (fmap B.pack $ replicateM 8 arbitrary)
+    arbitrary = address . B.pack <$> replicateM 8 arbitrary
 
 instance Arbitrary NetworkAddress where
-  arbitrary = networkAddress <$> (fmap B.pack $ replicateM 2 arbitrary)
+    arbitrary = networkAddress . B.pack <$> replicateM 2 arbitrary
 
 instance Arbitrary B.ByteString where
   arbitrary = fmap B.pack arbitrary

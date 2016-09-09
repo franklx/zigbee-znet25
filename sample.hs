@@ -13,7 +13,7 @@ main = do
         hPutStrLn stderr $ "usage: " ++ progName ++ " <modem_path> <command_name>"
         exitFailure
 
-    let (modemPath:cmdName:[]) = args
+    let [modemPath, cmdName] = args
 
     -- Open modem in read/write mode
     withBinaryFile modemPath ReadWriteMode $ \h -> do
@@ -30,16 +30,14 @@ main = do
     waitResponse h ds = do
         bs <- B.hGetSome h 256
         let (rs, ds') = runState (Z.decode bs) ds
-        done <- liftM or $ mapM printResponse rs
-        if done
-            then return ()
-            else waitResponse h ds'
+        done <- or <$> mapM printResponse rs
+        unless done $ waitResponse h ds'
 
-    printResponse (Right f@(ATCommandResponse _ _ _ _)) =
-        putStrLn (show f) >> return True
+    printResponse (Right f@ATCommandResponse{}) =
+        print f >> return True
 
     printResponse (Right f) =
-        putStrLn (show f) >> return False
+        print f >> return False
 
     printResponse (Left errStr) =
         hPutStrLn stderr errStr >> return False
