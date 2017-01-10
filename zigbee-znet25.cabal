@@ -7,7 +7,7 @@ copyright:          Copyright (c) 2012 David Joyner
 author:             David Joyner <david@joynerhome.net>
 maintainer:         Franco Lucchini <flucchini@gmail.com>
 stability:          experimental
-tested-with:        GHC == 7.0.4
+tested-with:        GHC == 8.0.1
 synopsis:           XBee ZNet 2.5 (ZigBee) wireless modem communications
 cabal-version:      >= 1.8
 homepage:           https://github.com/djoyner/zigbee-znet25
