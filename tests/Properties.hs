@@ -97,10 +97,10 @@ instance Arbitrary CommandName where
     c2 <- arbitrary
     return $ commandName [c1,c2]
 
-instance Arbitrary Address where
+instance Arbitrary ExtAddr where
     arbitrary = address . B.pack <$> replicateM 8 arbitrary
 
-instance Arbitrary NetworkAddress where
+instance Arbitrary NwkAddr where
     arbitrary = networkAddress . B.pack <$> replicateM 2 arbitrary
 
 instance Arbitrary B.ByteString where

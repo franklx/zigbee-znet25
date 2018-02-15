@@ -18,10 +18,10 @@ module Network.Protocol.ZigBee.ZNet25.Frame (
   , unCommandName
 
   -- * Node addressing
-  , Address
+  , ExtAddr
   , address
   , unAddress
-  , NetworkAddress
+  , NwkAddr
   , networkAddress
   , unNetworkAddress
 
@@ -71,27 +71,27 @@ data Frame = ApiIdNotImplemented Word8
            | ATCommand FrameId CommandName B.ByteString
            | ATCommandQueueParameterValue FrameId CommandName B.ByteString
            | ATCommandResponse FrameId CommandName CommandStatus B.ByteString
-           | RemoteCommandRequest FrameId Address NetworkAddress CommandOptions
+           | RemoteCommandRequest FrameId ExtAddr NwkAddr CommandOptions
                CommandName B.ByteString
-           | RemoteCommandResponse FrameId Address NetworkAddress CommandName
+           | RemoteCommandResponse FrameId ExtAddr NwkAddr CommandName
                CommandStatus B.ByteString
-           | ZigBeeTransmitRequest FrameId Address NetworkAddress
+           | ZigBeeTransmitRequest FrameId ExtAddr NwkAddr
                BroadcastRadius TransmitOptions B.ByteString
-           | ExplicitAddressingZigBeeCommandFrame FrameId Address NetworkAddress
+           | ExplicitAddressingZigBeeCommandFrame FrameId ExtAddr NwkAddr
                SourceEndpoint DestinationEndpoint ClusterId ProfileId
                BroadcastRadius TransmitOptions B.ByteString
-           | ZigBeeTransmitStatus FrameId NetworkAddress TransmitRetryCount
+           | ZigBeeTransmitStatus FrameId NwkAddr TransmitRetryCount
                DeliveryStatus DiscoveryStatus
-           | ZigBeeReceivePacket Address NetworkAddress ReceiveOptions
+           | ZigBeeReceivePacket ExtAddr NwkAddr ReceiveOptions
                B.ByteString
-           | ZigBeeExplicitRxIndicator Address NetworkAddress SourceEndpoint
+           | ZigBeeExplicitRxIndicator ExtAddr NwkAddr SourceEndpoint
                DestinationEndpoint ClusterId ProfileId ReceiveOptions
                B.ByteString
-           | ZigBeeIODataSampleIndicator Address NetworkAddress ReceiveOptions
+           | ZigBeeIODataSampleIndicator ExtAddr NwkAddr ReceiveOptions
                SampleCount DigitalChannelMask AnalogChannelMask B.ByteString
-           | XBeeSensorReadIndicator Address NetworkAddress ReceiveOptions
+           | XBeeSensorReadIndicator ExtAddr NwkAddr ReceiveOptions
                XBeeSensorMask B.ByteString
-           | NodeIdentificationIndicator Address NetworkAddress ReceiveOptions
+           | NodeIdentificationIndicator ExtAddr NwkAddr ReceiveOptions
                RemoteNetworkAddress RemoteAddress String ParentNetworkAddress
                DeviceType SourceAction ProfileId ManufacturerId
   deriving (Eq, Show)
@@ -410,51 +410,51 @@ instance Serialize CommandName where
 
 -- | All XBee ZNet 2.5 modules are identified by a unique (and static)
 -- 64-bit address.
-data Address = Address B.ByteString
+data ExtAddr = ExtAddr B.ByteString
   deriving (Eq, Ord)
 
-instance Show Address where
-  show (Address bs) = showHexAddress bs
+instance Show ExtAddr where
+  show (ExtAddr bs) = showHexAddress bs
 
-instance Serialize Address where
-  put (Address bs) = putRawByteString bs
-  get              = Address <$> getByteString 8
+instance Serialize ExtAddr where
+  put (ExtAddr bs) = putRawByteString bs
+  get              = ExtAddr <$> getByteString 8
 
--- | Construct an @Address@.  Beware that this function will 'error' if
+-- | Construct an @ExtAddr@.  Beware that this function will 'error' if
 -- the address is not exactly eight bytes long.
-address :: B.ByteString -> Address
+address :: B.ByteString -> ExtAddr
 address bs
-  | B.length bs == 8 = Address bs
-  | otherwise        = error "Address must be eight bytes in length"
+  | B.length bs == 8 = ExtAddr bs
+  | otherwise        = error "ExtAddr must be eight bytes in length"
 
--- | Deconstruct an @Address@.
-unAddress :: Address -> B.ByteString
-unAddress (Address bs) = bs
+-- | Deconstruct an @ExtAddr@.
+unAddress :: ExtAddr -> B.ByteString
+unAddress (ExtAddr bs) = bs
 
 -- | When XBee ZNet 2.5 modules join the network they are assigned a 16-bit
 -- address.  Note that unlike 'Address' which is unique and static for a
--- given node, a node's @NetworkAddress@ is dynamic and may change over
+-- given node, a node's @NwkAddr@ is dynamic and may change over
 -- time.
-data NetworkAddress = NetworkAddress B.ByteString
+data NwkAddr = NwkAddr B.ByteString
   deriving (Eq, Ord)
 
-instance Show NetworkAddress where
-  show (NetworkAddress bs) = showHexAddress bs
+instance Show NwkAddr where
+  show (NwkAddr bs) = showHexAddress bs
 
-instance Serialize NetworkAddress where
-  put (NetworkAddress bs) = putRawByteString bs
-  get                     = NetworkAddress <$> getByteString 2
+instance Serialize NwkAddr where
+  put (NwkAddr bs) = putRawByteString bs
+  get                     = NwkAddr <$> getByteString 2
 
--- | Construct a @NetworkAddress@.  Beware that this function will 'error' if
+-- | Construct a @NwkAddr@.  Beware that this function will 'error' if
 -- the address is not exactly two bytes long.
-networkAddress :: B.ByteString -> NetworkAddress
+networkAddress :: B.ByteString -> NwkAddr
 networkAddress bs
-  | B.length bs == 2 = NetworkAddress bs
-  | otherwise        = error "NetworkAddress must be two bytes in length"
+  | B.length bs == 2 = NwkAddr bs
+  | otherwise        = error "NwkAddr must be two bytes in length"
 
--- | Deconstruct a @NetworkAddress@.
-unNetworkAddress :: NetworkAddress -> B.ByteString
-unNetworkAddress (NetworkAddress bs) = bs
+-- | Deconstruct a @NwkAddr@.
+unNetworkAddress :: NwkAddr -> B.ByteString
+unNetworkAddress (NwkAddr bs) = bs
 
 -- Various type aliases used in Frame constructors.
 type AnalogChannelMask = Word8
@@ -470,11 +470,11 @@ type DiscoveryStatus = Word8
 type FrameId = Word8
 type ManufacturerId = Word8
 type ModemStatusByte = Word8
-type ParentNetworkAddress = NetworkAddress
+type ParentNetworkAddress = NwkAddr
 type ProfileId = Word8
 type ReceiveOptions = Word8
-type RemoteAddress = Address
-type RemoteNetworkAddress = NetworkAddress
+type RemoteAddress = ExtAddr
+type RemoteNetworkAddress = NwkAddr
 type SampleCount = Word8
 type SourceAction = Word8
 type SourceEndpoint = Word8
